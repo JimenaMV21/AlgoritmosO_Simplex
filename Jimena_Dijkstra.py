@@ -14,17 +14,13 @@ import heapq
 from collections import defaultdict
 
 # Configuración para Colab
-ox.settings.log_console = True
-ox.settings.use_cache = True
-ox.settings.timeout = 300
+ox.settings.log_console = True #Logs de la consola
+ox.settings.use_cache = True #Cache para no volver a descargar
+ox.settings.timeout = 300 #Timeout de 300 segundos
 
 def dijkstra_manual(grafo, inicio, fin):
-    """
-    Implementación manual del algoritmo de Dijkstra
-    """
-    print("🔍 Ejecutando algoritmo de Dijkstra manual...")
     
-    # Inicializar estructuras
+    # Inicializacion de las estructuras
     distancias = {nodo: float('inf') for nodo in grafo.nodes()}
     predecesores = {nodo: None for nodo in grafo.nodes()}
     visitados = set()
@@ -35,14 +31,14 @@ def dijkstra_manual(grafo, inicio, fin):
     # Cola de prioridad: (distancia, nodo)
     cola_prioridad = [(0, inicio)]
     
-    iteraciones = 0
+    iteraciones = 0 #Importantes para el algoritmo
     nodos_visitados = 0
     
     while cola_prioridad:
         # Extraer el nodo con menor distancia
         distancia_actual, nodo_actual = heapq.heappop(cola_prioridad)
         
-        # Si ya visitamos este nodo con una distancia menor, saltar
+        # Si ya visitamos este nodo con una distancia menor, nos lo saltamos
         if distancia_actual > distancias[nodo_actual]:
             continue
             
@@ -55,7 +51,7 @@ def dijkstra_manual(grafo, inicio, fin):
             print(f"✅ Dijkstra completado: {iteraciones} iteraciones, {nodos_visitados} nodos visitados")
             break
         
-        # Explorar vecinos
+        # Ahora exploramos a los vecinos
         for vecino in grafo.neighbors(nodo_actual):
             if vecino in visitados:
                 continue
@@ -74,7 +70,7 @@ def dijkstra_manual(grafo, inicio, fin):
                 
             nueva_distancia = distancia_actual + peso
             
-            # Si encontramos un camino más corto, actualizar
+            # Si encontramos un camino más corto, actualizamos
             if nueva_distancia < distancias[vecino]:
                 distancias[vecino] = nueva_distancia
                 predecesores[vecino] = nodo_actual
@@ -93,7 +89,7 @@ def dijkstra_manual(grafo, inicio, fin):
     
     camino.reverse()
     
-    print(f"📏 Camino reconstruido: {len(camino)} nodos")
+    print(f" Camino reconstruido: {len(camino)} nodos")
     return camino, distancias[fin]
 
 def descargar_mapa():
@@ -102,7 +98,7 @@ def descargar_mapa():
     try:
         north, south, east, west = 17.15, 16.90, -96.60, -96.90
         G = ox.graph_from_bbox(north, south, east, west, network_type='drive')
-        print(f"✅ Mapa descargado exitosamente. Nodos: {len(G.nodes())}, Aristas: {len(G.edges())}")
+        print(f" Mapa descargado exitosamente. Nodos: {len(G.nodes())}, Aristas: {len(G.edges())}")
         return G
 
     except Exception as e:
@@ -125,11 +121,15 @@ def calcular_tiempo_viaje(G):
     velocidad_estandar_ms = 20 * 1000 / 3600
 
     for u, v, k, data in G.edges(keys=True, data=True):
-        longitud = data.get('length', 0)
+         #u,v: Nodos conectados
+        #k: Identificador de la calle
+        #data: Informacion de la calle
+
+        longitud = data.get('length', 0) # Obtiene la longitud de la calle en metros
         if longitud is None or longitud == 0:
             longitud = 1
 
-        maxspeed = data.get('maxspeed', None)
+        maxspeed = data.get('maxspeed', None) # Obtiene la velocidad máxima, si no "tiene" 20 por defecto
         velocidad_ms = velocidad_estandar_ms
 
         if maxspeed is not None:
@@ -152,19 +152,24 @@ def calcular_tiempo_viaje(G):
             elif isinstance(maxspeed, (int, float)):
                 velocidad_ms = maxspeed * 1000 / 3600
 
+        # Calcular tiempo de viaje: tiempo = distancia / velocidad.
+        #Si la calle tiene 0, no es transitable
+        
         tiempo_viaje = longitud / velocidad_ms if velocidad_ms > 0 else float('inf')
 
+        
+        # Asignar atributos y hacer Dijkstra
         G[u][v][k]['tiempo_viaje'] = tiempo_viaje
         G[u][v][k]['velocidad_utilizada_ms'] = velocidad_ms
 
     print("✅ Tiempos de viaje calculados y asignados")
-    return G
+    return G #El nombre de nuestro nodo
 
 def obtener_seleccion_usuario():
     print("\n📍 SELECCIÓN INTERACTIVA DE PUNTOS")
     print("=" * 50)
 
-    puntos_disponibles = {
+    puntos_disponibles = { #Lista de los puntos disponibles en el mapa
         1: {"nombre": "Oaxaca de Juárez (Zócalo)", "coords": (17.0614, -96.7250)},
         2: {"nombre": "Xoxocotlán (Centro)", "coords": (17.0292, -96.7356)},
         3: {"nombre": "San Raymundo Jalpan (Centro)", "coords": (16.9667, -96.7667)},
@@ -179,7 +184,7 @@ def obtener_seleccion_usuario():
     print("-" * 40)
 
     def seleccionar_punto(tipo_punto):
-        while True:
+        while True: #Mientras el lugar visitado este dentro de la lista
             try:
                 seleccion = int(input(f"\nSeleccione el número para el {tipo_punto} (1-{len(puntos_disponibles)}): "))
                 
@@ -201,8 +206,8 @@ def obtener_seleccion_usuario():
     print("\n🎯 SELECCIÓN DE DESTINO:")
     destino = seleccionar_punto("destino")
 
-    if origen['nombre'] == destino['nombre']:
-        print("\n⚠️ Advertencia: Origen y destino son el mismo lugar.")
+    if origen['nombre'] == destino['nombre']: #Si el origen y destino son el mismo lugar
+        print("\n Advertencia: Origen y destino son el mismo lugar.")
 
     return origen, destino
 
@@ -232,6 +237,10 @@ def configurar_puntos_ruta(G, origen, destino):
 
     return puntos_nodos, puntos_coords, nombres
 
+
+# Calcular ruta usando Dijkstra con tiempo como peso
+#  #Optimiza por tiempo y usa dijkstra
+#Devuelve la lista de nodos que forman la ruta mas rapida
 def calcular_ruta_dijkstra_manual(G, puntos_nodos):
     print("\n🧮 CALCULANDO RUTA ÓPTIMA CON DIJKSTRA MANUAL...")
 
@@ -247,7 +256,7 @@ def calcular_ruta_dijkstra_manual(G, puntos_nodos):
             
         ruta_nodos, tiempo_total = resultado_dijkstra
 
-        # Calcular métricas de la ruta
+        # Calcula las metricas
         distancia_total = 0
         segmentos = []
 
@@ -456,6 +465,6 @@ def main():
     else:
         print("\n❌ No se pudo calcular una ruta entre los puntos seleccionados")
 
-# Ejecutar el programa
+# Ejecucion del programa
 if __name__ == "__main__":
     main()
